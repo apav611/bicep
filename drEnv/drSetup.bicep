@@ -28,9 +28,9 @@ param azureFirewall object = {
   routeName: 'r-nexthop-to-fw'
 }
 
-param dmz object = {
-  name: 'DMZ'
-  subnetName: 'DMZSubnet'
+param web object = {
+  name: 'Web'
+  subnetName: 'WebSubnet'
   subnetPrefix: '10.0.0.128/25'
 }
 
@@ -100,9 +100,9 @@ resource vnetHub 'Microsoft.Network/virtualNetworks@2020-05-01' = {
         }
       }
       {
-        name: dmz.subnetName
+        name: web.subnetName
         properties: {
-          addressPrefix: dmz.subnetPrefix
+          addressPrefix: web.subnetPrefix
         }
       }
       {
