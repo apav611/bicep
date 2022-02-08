@@ -1,9 +1,13 @@
+// loacation set based on bastion resource group
+// bastion and vnet should reside in seperate resource group for easy clean-up
 param location string = resourceGroup().location
 
-param virtualNetworkName string = 'vnet-bicep-bastion'
+// networking parameters
+param vnetResourceGroupName string = 'rg-bastion-deploy-test'
+param virtualNetworkName string = 'vnet-bastion-deploy-test'
 param subnetName string = 'AzureBastionSubnet'
-param vnetResourceGroupName string = 'bicep-bastion-test'
 
+// lookup of vnet and subnet
 resource stg 'Microsoft.Network/virtualNetworks@2021-02-01' existing = {
     name: virtualNetworkName
     scope: resourceGroup(vnetResourceGroupName)
@@ -13,10 +17,11 @@ resource stg 'Microsoft.Network/virtualNetworks@2021-02-01' existing = {
     }
 }
 
+// sets ID var for vnet and subnet
 output vnetID string = stg.id
-
 output subnetID string = stg::subnet.id
 
+// deploy public ip for bastion
 resource bastionPip 'Microsoft.Network/publicIPAddresses@2020-06-01' = {
   name: 'bastionpip'
   location: location
@@ -28,6 +33,9 @@ resource bastionPip 'Microsoft.Network/publicIPAddresses@2020-06-01' = {
   }
 }
 
+// deploy nsg for bastion
+// commented out for break glass script as it will already exist
+/*
 resource nsgBastion 'Microsoft.Network/networkSecurityGroups@2020-06-01' = {
   name: 'nsgbastion'
   location: location
@@ -137,6 +145,10 @@ resource nsgBastion 'Microsoft.Network/networkSecurityGroups@2020-06-01' = {
   }
 }
 
+output networkSecurityGroup string = nsgBastion.id
+*/
+
+// deploy bastion resource
 resource bastionHostResource 'Microsoft.Network/bastionHosts@2020-06-01' = {
   name: 'bastionhost'
   location: location
