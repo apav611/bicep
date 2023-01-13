@@ -1,62 +1,59 @@
+// Shared Parameters
 param environmentType string
-param resourcePrefix string
+param resourcePrefix string //TODO rethink parameter
 param location string = resourceGroup().location
-param subnetid string
-param accessObjectId1 string //more specific name could provide insight and help with documentation
-param accessObjectId2 string //more specific name could provide insight and help with documentation
+
+// KeyVault Parameters
+param enabledForTemplateDeployment bool = true
+param enabledForDeployment bool = false
+
+// PE Parameters
+param vnetName string
+param subnetName string
 
 resource vault 'Microsoft.KeyVault/vaults@2022-07-01' = {
     name: 'kv-${resourcePrefix}-${environmentType}'
     location: location
     properties: {
         accessPolicies: [
-            {
-                tenantId: subscription().tenantId
-                objectId: accessObjectId1
-                permissions: {
-                    certificates: [ 'all' ]
-                    secrets: [ 'all' ]
-                    keys: [ 'all' ]
-                    storage: [ 'all' ]
-                }
-            }
-            {
-                tenantId: subscription().tenantId
-                objectId: accessObjectId2
-                permissions: {
-                    certificates: [ 'all' ]
-                    secrets: [ 'all' ]
-                    keys: [ 'all' ]
-                    storage: [ 'all' ]
-                }
-            }
-        ]
-        enableRbacAuthorization: true //azure rbac allows you to centrally manage access instead of per kv
-        enableSoftDelete: true
-        enabledForDeployment: true
+        ] //enableRbacAuthorization is enabled so access policy will be assigned via PS or CLI
+        enabledForDeployment: enabledForDeployment
         enabledForDiskEncryption: false //only needed for key vault that will be used as part of IaaS disk encryption (ADE)
-        enabledForTemplateDeployment: true
+        enabledForTemplateDeployment: enabledForTemplateDeployment
         enablePurgeProtection: true
-        tenantId: subscription().tenantId
+        enableRbacAuthorization: true //azure rbac allows you to centrally manage access instead of per kv
+        networkAcls: {
+          defaultAction: 'deny'
+          bypass: 'AzureServices'
+        }
+        publicNetworkAccess:'disabled'
         sku: {
             name: 'standard'
             family: 'A'
         }
-        networkAcls: {
-            defaultAction: 'Deny'
-            bypass: 'AzureServices'
-        }
+        tenantId: subscription().tenantId
     }
 }
-var keyvaultPleName = 'kv-${resourcePrefix}-${environmentType}-pe'
+
+// retrieve subnetID programatically 
+resource existingVnet 'Microsoft.Network/virtualNetworks@2019-11-01' existing= {
+  name: vnetName
+}
+
+resource existingSubNetwork 'Microsoft.Network/virtualNetworks/subnets@2022-07-01' existing = {
+  name: subnetName
+  parent: existingVnet
+}
+
+var keyvaultPeName = 'kv-${resourcePrefix}-${environmentType}-pe'
 resource keyVaultPrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-07-01' = {
-  name: keyvaultPleName
+  name: keyvaultPeName
   location: location
  // tags: tags
   properties: {
     privateLinkServiceConnections: [
       {
-        name: keyvaultPleName
+        name: keyvaultPeName
         properties: {
           groupIds: [
             'vault'
@@ -66,7 +63,7 @@ resource keyVaultPrivateEndpoint 'Microsoft.Network/privateEndpoints@2022-07-01'
       }
     ]
     subnet: {
-      id: subnetid
+      id: existingSubNetwork.id
     }
   }
 }
